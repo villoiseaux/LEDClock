@@ -3,6 +3,7 @@
 #include <MD_Parola.h>
 #include <MD_MAX72xx.h>
 #include <HTTPClient.h>
+#include <HTTPUpdate.h>
 #include <WiFiClientSecure.h>
 #include <Arduino_JSON.h>
 #include "CA-certificat.h"
@@ -16,7 +17,8 @@
 #define CS_PIN 21
 
 #define THINGNAME "Th CLK"
-#define VERSION "0.0.1"
+#define VERSION "0.0.1"   // Basic without Web Conf & FW Update
+#define VERSION "0.0.2w"   // WIP FW Update
 
 // create an instance of the MD_Parola class
 MD_Parola ledMatrix = MD_Parola(HARDWARE_TYPE, CS_PIN, MAX_DEVICES);
@@ -80,6 +82,10 @@ String getAbstractApiInfo(){
   return ("ERROR");
 }
 
+void checkFWUpdate (){
+  
+}
+
 void setup() {
   Serial.begin(115200);
 
@@ -119,6 +125,11 @@ void setup() {
   ledMatrix.print("Time");
   setClock();  
 
+  Serial.println(" connected");
+  ledMatrix.print("Nex FW?");
+  checkFWUpdate();
+  delay (1000);
+  
   ledMatrix.setTextAlignment(PA_CENTER);
   ledMatrix.print("Geoloc");
   String loc=getAbstractApiInfo();

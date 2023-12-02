@@ -18,9 +18,9 @@
 
 #define THINGNAME "Th CLK"
 #define VERSION "0.0.1"   // Basic without Web Conf & FW Update
-#define VERSION "0.0.2w"   // WIP FW Update
+#define VERSION "0.0.2"   // WIP FW Update
 
-#define UPDATE_FW_URL "http://iot.pinon-hebert.fr/ESP_Clock.ino.bin"
+#define UPDATE_FW_URL "http://iot.pinon-hebert.fr/esp_clock/ESP_Clock.ino.bin"
 
 // create an instance of the MD_Parola class
 MD_Parola ledMatrix = MD_Parola(HARDWARE_TYPE, CS_PIN, MAX_DEVICES);
@@ -175,7 +175,7 @@ void setup() {
   setClock();  
 
   Serial.println(" connected");
-  ledMatrix.print("Nex FW?");
+  ledMatrix.print("upd?");
   checkFWUpdate();
   delay (1000);
   

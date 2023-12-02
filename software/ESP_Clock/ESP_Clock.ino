@@ -20,6 +20,8 @@
 #define VERSION "0.0.1"   // Basic without Web Conf & FW Update
 #define VERSION "0.0.2w"   // WIP FW Update
 
+#define UPDATE_FW_URL "http://iot.pinon-hebert.fr/ESP_Clock.ino.bin"
+
 // create an instance of the MD_Parola class
 MD_Parola ledMatrix = MD_Parola(HARDWARE_TYPE, CS_PIN, MAX_DEVICES);
 
@@ -92,6 +94,12 @@ void update_finished() {
 
 void update_progress(int cur, int total) {
   Serial.printf("CALLBACK:  HTTP update process at %d of %d bytes...\n", cur, total);
+  ledMatrix.setTextAlignment(PA_CENTER);
+  int prog=cur*100/total;
+  String s=String(prog);  
+  s=s+" %";
+  ledMatrix.print(s);
+  
 }
 
 void update_error(int err) {
@@ -104,19 +112,25 @@ void checkFWUpdate (){
   httpUpdate.onEnd(update_finished);
   httpUpdate.onProgress(update_progress);
   httpUpdate.onError(update_error);
-  Serial.println("UPDATE http://server/file.bin");
-  t_httpUpdate_return ret = httpUpdate.update(client, "http://server/file.bin");
+  Serial.println("UPDATE" UPDATE_FW_URL);
+  t_httpUpdate_return ret = httpUpdate.update(client, UPDATE_FW_URL);
       switch (ret) {
       case HTTP_UPDATE_FAILED:
         Serial.printf("HTTP_UPDATE_FAILED Error (%d): %s\n", httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str());
+        ledMatrix.setTextAlignment(PA_CENTER);
+        ledMatrix.print("Update");
         break;
 
       case HTTP_UPDATE_NO_UPDATES:
         Serial.println("HTTP_UPDATE_NO_UPDATES");
+        ledMatrix.setTextAlignment(PA_CENTER);
+        ledMatrix.print("Nothing");
         break;
 
       case HTTP_UPDATE_OK:
         Serial.println("HTTP_UPDATE_OK");
+        ledMatrix.setTextAlignment(PA_CENTER);
+        ledMatrix.print("Done.");
         break;
     }
 }

@@ -17,3 +17,7 @@ If may content :
 #define ABSTRACT_URL "https://ipgeolocation.abstractapi.com/v1/?api_key=AAAAAAAAAA&fields=timezone"
 </pre>
 Where AAAAAAAAAA is your API KEY
+
+<h1>Concerning configuration common file</h1>
+<h2>The common.h file</h2>
+The former CA-certificat.h file is renamed common.h. It contains all common values (including the certifiacte).

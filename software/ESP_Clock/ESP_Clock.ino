@@ -20,7 +20,8 @@
 #define VERSION "0.0.1"   // Basic without Web Conf & FW Update
 #define VERSION "0.0.2"   // WIP FW Update
 
-#define UPDATE_FW_URL "http://iot.pinon-hebert.fr/esp_clock/ESP_Clock.ino.bin"
+
+#define UPDATE_FW_URL "http://iot.pinon-hebert.fr/esp_clock/ESP_Clock.ino-" VERSION "-next.bin"
 
 // create an instance of the MD_Parola class
 MD_Parola ledMatrix = MD_Parola(HARDWARE_TYPE, CS_PIN, MAX_DEVICES);

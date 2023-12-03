@@ -1,3 +1,5 @@
+#define TRACES
+
 #include <WiFi.h>
 #include <WiFiMulti.h>
 #include <MD_Parola.h>
@@ -6,7 +8,8 @@
 #include <HTTPUpdate.h>
 #include <WiFiClientSecure.h>
 #include <Arduino_JSON.h>
-#include "CA-certificat.h"
+#include "common.h"
+#include "WebApp.h"
 // My local files
 #include "local/Abstract.h"
 #include "local/SSIDs.h"
@@ -18,7 +21,8 @@
 
 #define THINGNAME "Th CLK"
 #define VERSION "0.0.1"   // Basic without Web Conf & FW Update
-#define VERSION "0.0.2"   // WIP FW Update
+#define VERSION "0.0.2"   // FW Update
+#define VERSION "0.0.3w"   // WIP Web Config
 
 
 #define UPDATE_FW_URL "http://iot.pinon-hebert.fr/esp_clock/ESP_Clock.ino-" VERSION "-next.bin"
@@ -32,20 +36,18 @@ int timeShift=0; // time shift in seconds
 void setClock() {
   configTime(0, 0, "pool.ntp.org");
 
-  Serial.println("Waiting for NTP time sync: ");
+  DEBUG("Waiting for NTP time sync: ");
   time_t nowSecs = time(nullptr);
   while (nowSecs < 8 * 3600 * 2) {
     delay(500);
-    Serial.print(F("."));
+    DEBUG("tic");
     yield();
     nowSecs = time(nullptr);
   }
 
-  Serial.println();
   struct tm timeinfo;
   gmtime_r(&nowSecs, &timeinfo);
-  Serial.print("Current time: ");
-  Serial.println(asctime(&timeinfo));
+  DEBUGVAL(asctime(&timeinfo));
 }
 
 // Manage Wifi
@@ -59,26 +61,27 @@ String getAbstractApiInfo(){
      client -> setCACert(AbstractApirootCACertificate);
        {
        HTTPClient https;
-       Serial.print("[HTTPS] begin...\n");
+       DEBUG("[HTTPS] begin");
        if (https.begin(*client, ABSTRACT_URL)) {  // Defined in Abstract.h
-         Serial.print("[HTTPS] GET...\n");
+         DEBUG("[HTTPS] GET");
          // start connection and send HTTP header
          int httpCode = https.GET();
          // httpCode will be negative on error
          if (httpCode > 0) {
            // HTTP header has been send and Server response header has been handled
-           Serial.printf("[HTTPS] GET... code: %d\n", httpCode);
+           DEBUGVAL(httpCode);
            // file found at server
            if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY) {
              String payload = https.getString();
              return payload;
            }
           } else {
-           Serial.printf("[HTTPS] GET... failed, error: %s\n", https.errorToString(httpCode).c_str());
+           DEBUG("[HTTPS] GET... failed, error: ");
+           DEBUGVAL(https.errorToString(httpCode).c_str());
           }
           https.end();
         } else {
-          Serial.printf("[HTTPS] Unable to connect\n");
+          ERROR("[HTTPS] Unable to connect");
         }
       }
     }
@@ -86,17 +89,18 @@ String getAbstractApiInfo(){
 }
 
 void update_started() {
-  Serial.println("CALLBACK:  HTTP update process started");
+  DEBUG("CALLBACK:  HTTP update process started");
 }
 
 void update_finished() {
-  Serial.println("CALLBACK:  HTTP update process finished");
+  DEBUG("CALLBACK:  HTTP update process finished");
 }
 
 void update_progress(int cur, int total) {
-  Serial.printf("CALLBACK:  HTTP update process at %d of %d bytes...\n", cur, total);
+  DEBUG("CALLBACK:  HTTP update process");
   ledMatrix.setTextAlignment(PA_CENTER);
   int prog=cur*100/total;
+  DEBUGVAL(prog);
   String s=String(prog);  
   s=s+" %";
   ledMatrix.print(s);
@@ -104,7 +108,8 @@ void update_progress(int cur, int total) {
 }
 
 void update_error(int err) {
-  Serial.printf("CALLBACK:  HTTP update fatal error code %d\n", err);
+  ERROR(err);
+  DEBUGVAL(err);
 }
 
 void checkFWUpdate (){
@@ -113,23 +118,26 @@ void checkFWUpdate (){
   httpUpdate.onEnd(update_finished);
   httpUpdate.onProgress(update_progress);
   httpUpdate.onError(update_error);
-  Serial.println("UPDATE" UPDATE_FW_URL);
+  DEBUG("UPDATE");
+  DEBUGVAL(UPDATE_FW_URL);
   t_httpUpdate_return ret = httpUpdate.update(client, UPDATE_FW_URL);
       switch (ret) {
       case HTTP_UPDATE_FAILED:
-        Serial.printf("HTTP_UPDATE_FAILED Error (%d): %s\n", httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str());
+        DEBUGVAL(httpUpdate.getLastError());
+        DEBUGVAL(httpUpdate.getLastErrorString().c_str());
+        ERROR("HTTP_UPDATE_FAILED Error");
         ledMatrix.setTextAlignment(PA_CENTER);
         ledMatrix.print("Update");
         break;
 
       case HTTP_UPDATE_NO_UPDATES:
-        Serial.println("HTTP_UPDATE_NO_UPDATES");
+        WARNING("HTTP_UPDATE_NO_UPDATES");
         ledMatrix.setTextAlignment(PA_CENTER);
         ledMatrix.print("Nothing");
         break;
 
       case HTTP_UPDATE_OK:
-        Serial.println("HTTP_UPDATE_OK");
+        DEBUG("HTTP_UPDATE_OK");
         ledMatrix.setTextAlignment(PA_CENTER);
         ledMatrix.print("Done.");
         break;
@@ -159,23 +167,24 @@ void setup() {
   #endif
 
   // wait for WiFi connection
-  Serial.println("Serach WIFI");
+  DEBUG("Serach WIFI");
   ledMatrix.setTextAlignment(PA_CENTER);
   ledMatrix.print("WiFi");
-  Serial.print("Waiting for WiFi to connect...");
+  DEBUG("Waiting for WiFi to connect...");
   while ((WiFiMulti.run() != WL_CONNECTED)) {
     delay (100);
+    DEBUGVAL(WiFi.status());
   }
   ledMatrix.setTextAlignment(PA_CENTER);
   ledMatrix.print(WiFi.SSID());
   delay (1000);
   
-  Serial.println(" connected");
+  DEBUG("Connected");
   ledMatrix.setTextAlignment(PA_CENTER);
   ledMatrix.print("Time");
   setClock();  
 
-  Serial.println(" connected");
+  DEBUG("Connected");
   ledMatrix.print("upd?");
   checkFWUpdate();
   delay (1000);
@@ -183,21 +192,20 @@ void setup() {
   ledMatrix.setTextAlignment(PA_CENTER);
   ledMatrix.print("Geoloc");
   String loc=getAbstractApiInfo();
-  Serial.println(loc);
+  DEBUGVAL(loc);
 
   JSONVar myObject = JSON.parse(loc);
   // JSON.typeof(jsonVar) can be used to get the type of the variable
   if (JSON.typeof(myObject) == "undefined") {
-    Serial.println("Parsing input failed!");
+    ERROR("Parsing input failed!");
     return;
   }
 
-  Serial.print("JSON.typeof(myObject) = ");
-  Serial.println(JSON.typeof(myObject)); // prints: object 
+  DEBUGVAL(JSON.typeof(myObject)); // prints: object 
   int hShift;
   if (myObject.hasOwnProperty("timezone")) {
     hShift=(int)myObject["timezone"]["gmt_offset"];
-    Serial.println(hShift);
+    DEBUGVAL(hShift);
   }
   int sShift=hShift*3600;
   
@@ -214,7 +222,7 @@ void loop() {
   struct tm timeinfo;
   time_t nows = time(nullptr)+timeShift;
   gmtime_r(&nows, &timeinfo);
-  Serial.print(asctime(&timeinfo));
+  DEBUGVAL(asctime(&timeinfo));
   int h = timeinfo.tm_hour;
   int m =  timeinfo.tm_min;
   if ((h==04) && (m==00)){

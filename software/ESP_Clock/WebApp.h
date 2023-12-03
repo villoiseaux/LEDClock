@@ -17,5 +17,21 @@
     #define DEBUGVAL(value) {}
     #define DEBUGHEXVAL(value) {} 
   #endif  
+#include <Arduino.h>
+#include <WiFi.h>
+
+class WebApp {
+  public:
+    WebApp(String appName, String appversion="NA");
+    ~WebApp();
+    void runApp();
+    int initWifiAP();
+    // Static methods
+    static String strStatus(int st);
+  private:
+    String _appName;
+ };
+
+
 
 #endif

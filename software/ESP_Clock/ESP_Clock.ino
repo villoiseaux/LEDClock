@@ -172,8 +172,12 @@ void setup() {
   ledMatrix.print("WiFi");
   DEBUG("Waiting for WiFi to connect...");
   while ((WiFiMulti.run() != WL_CONNECTED)) {
-    delay (100);
-    DEBUGVAL(WiFi.status());
+    ledMatrix.print("Config");
+    DEBUGVAL(WebApp::strStatus(WiFi.status()));
+    WebApp config("CONFIG");
+    config.initWifiAP();
+    config.runApp();
+    FATAL("Nothing to do here!");
   }
   ledMatrix.setTextAlignment(PA_CENTER);
   ledMatrix.print(WiFi.SSID());

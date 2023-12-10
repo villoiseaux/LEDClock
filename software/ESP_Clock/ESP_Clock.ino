@@ -19,7 +19,7 @@
 #define MAX_DEVICES 4 // 4 blocks
 #define CS_PIN 21
 
-#define THINGNAME "Th CLK"
+#define THINGNAME "Clock"
 #define VERSION "0.0.1"   // Basic without Web Conf & FW Update
 #define VERSION "0.0.2"   // FW Update
 #define VERSION "0.0.3w"   // WIP Web Config
@@ -153,12 +153,15 @@ void setup() {
   ledMatrix.begin();         // initialize the LED Matrix
   ledMatrix.setIntensity(0); // set the brightness of the LED matrix display (from 0 to 15)
   ledMatrix.displayClear();  // clear LED matrix display
+
   
   ledMatrix.setTextAlignment(PA_LEFT);
   ledMatrix.print(THINGNAME);
   delay (3000);
   ledMatrix.print(VERSION);
   delay (3000);
+
+ 
   
   WiFi.mode(WIFI_STA);
   WiFiMulti.addAP(PRIMARY_SSID);
@@ -182,6 +185,13 @@ void setup() {
   ledMatrix.setTextAlignment(PA_CENTER);
   ledMatrix.print(WiFi.SSID());
   delay (1000);
+
+  String srssi=String(WiFi.RSSI());
+  srssi+="db";
+  ledMatrix.setTextAlignment(PA_CENTER);
+  ledMatrix.print(srssi);
+  DEBUGVAL(srssi);
+  delay (1000);
   
   DEBUG("Connected");
   ledMatrix.setTextAlignment(PA_CENTER);
@@ -191,7 +201,7 @@ void setup() {
   DEBUG("Connected");
   ledMatrix.print("upd?");
   checkFWUpdate();
-  delay (1000);
+  
   
   ledMatrix.setTextAlignment(PA_CENTER);
   ledMatrix.print("Geoloc");

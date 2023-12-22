@@ -232,6 +232,11 @@ void setup() {
   timeShift=sShift;
 }
 
+void displayTime(char* timeBuffer){
+  ledMatrix.setTextAlignment(PA_CENTER);
+  ledMatrix.print(timeBuffer); // display time  
+}
+
 void loop() {
   struct tm timeinfo;
   time_t nows = time(nullptr)+timeShift;
@@ -247,9 +252,8 @@ void loop() {
   }
   char timeBuffer[6];
   sprintf(timeBuffer,"%d:%02d", h, m);
-  
-  ledMatrix.setTextAlignment(PA_CENTER);
-  ledMatrix.print(timeBuffer); // display time
+
+  displayTime (timeBuffer);
   unsigned long old=m;
   // Wait for next minute
   while (old==m) {

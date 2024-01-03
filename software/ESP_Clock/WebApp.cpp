@@ -1,6 +1,7 @@
 #include <WiFi.h>
 #include <AsyncTCP.h>
-#include <ESPAsyncWebServer.h>
+#include <ESPAsyncWebSrv.h>
+//#include <ESPAsyncWebServer.h> for older versions
 
 #define TRACES
 #include "WebApp.h"

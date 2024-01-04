@@ -4,3 +4,6 @@
 #define VERSION "0.0.3w"   // WIP Web Config
 #define VERSION "0.0.4w"   // Object refactoring  
 #define UPDATE_FW_URL "http://iot.pinon-hebert.fr/esp_clock/ESP_Clock.ino-" VERSION "-next.bin"
+
+#define CONFIG_SSID "MYCLOCK"
+#define CONFIG_PWD "12345678"

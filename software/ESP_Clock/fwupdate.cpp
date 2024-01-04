@@ -8,6 +8,7 @@
 #include <WiFiClientSecure.h>
 #include "fwupdate.h"
 #include "LedMatrix.h"
+#include "messages.h"
 
 
 LedMatrix* pdisp=NULL;
@@ -40,9 +41,8 @@ void update_error(int err) {
 
 void checkFWUpdate (LedMatrix* d){
   pdisp=d;
-  d->displayString("Update");
+  d->displayString(MSG_CHECK_FW_UPDATE);
   Serial.println(UPDATE_FW_URL);
-  delay(500);
   WiFiClient client;
   httpUpdate.onStart(update_started);
   httpUpdate.onEnd(update_finished);
@@ -55,19 +55,19 @@ void checkFWUpdate (LedMatrix* d){
         DEBUGVAL(httpUpdate.getLastErrorString().c_str());
         ERROR("HTTP_UPDATE_FAILED Error");
         d->alignment(PA_CENTER);
-        d->displayString("Update");
+        d->displayString(MSG_UPDATE_FAILED);
         break;
 
       case HTTP_UPDATE_NO_UPDATES:
         WARNING("HTTP_UPDATE_NO_UPDATES");
         d->alignment(PA_CENTER);
-        d->displayString("Nothing");
+        d->displayString(MSG_UPDATE_NOTHING);
         break;
 
       case HTTP_UPDATE_OK:
         DEBUG("HTTP_UPDATE_OK");
         d->alignment(PA_CENTER);
-        d->displayString("Done.");
+        d->displayString(MSG_UPDATE_DONE);
         break;
     }
 }

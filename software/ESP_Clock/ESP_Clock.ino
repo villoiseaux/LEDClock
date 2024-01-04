@@ -12,13 +12,14 @@
 #include "common.h"
 #include "WebApp.h"
 #include "ledMatrix.h"
+#include "esp_wifi.h"
 
 // My local files
 #include "local/Abstract.h"
 #include "local/SSIDs.h"
 
 #include "fwupdate.h"
-
+#include "messages.h"
 // Display object to share the MD_Parola class 
 LedMatrix ledDisplay;
 
@@ -78,6 +79,7 @@ String getAbstractApiInfo(){
   return ("ERROR");
 }
 
+int connected=1;
 
 void setup() {
   Serial.begin(115200);
@@ -86,13 +88,13 @@ void setup() {
   // Write firmware name & version
   ledDisplay.alignment(PA_LEFT);
   ledDisplay.displayString(THINGNAME);
-  delay (3000);
+  delay (1000);
   ledDisplay.displayString(VERSION);
-  delay (3000);
+  delay (1000);
 
  
   // Try connect wifi
-  WiFi.mode(WIFI_STA);
+  WiFi.mode(WIFI_MODE_APSTA);
   WiFiMulti.addAP(PRIMARY_SSID);
   #ifdef SECONDARY_SSID
     WiFiMulti.addAP(SECONDARY_SSID);
@@ -101,69 +103,69 @@ void setup() {
   // wait for WiFi connection
   DEBUG("Serach WIFI");
   ledDisplay.alignment(PA_CENTER);
-  ledDisplay.displayString("WiFi");
+  ledDisplay.displayString(MSG_SEARCH_WIFI);
   DEBUG("Waiting for WiFi to connect...");
   while ((WiFiMulti.run() != WL_CONNECTED)) {
-    ledDisplay.displayString("Config");
-    DEBUGVAL(WebApp::strStatus(WiFi.status()));
-    WebApp config("CONFIG");
-    config.initWifiAP();
-    config.runApp();
-    FATAL("Nothing to do here!");
+    ledDisplay.displayString(MSG_CONFIG_MODE);
+    connected=0;
   }
-  // Display SSID
-  ledDisplay.displayString(WiFi.SSID());
-  DEBUGVAL(WiFi.SSID());
-  delay (1000);
+  if (connected){
+    // Display SSID
+    ledDisplay.displayString(WiFi.SSID());
+    DEBUGVAL(WiFi.SSID());
+    delay (1000);
 
-  // Dixplay RSSI
-  String srssi=String(WiFi.RSSI());
-  srssi+="db";
-  ledDisplay.displayString(srssi);
-  DEBUGVAL(srssi);
-  delay (1000);
-  
-  DEBUG("Connected");
+    // Dixplay RSSI
+    String srssi=String(WiFi.RSSI());
+    srssi+="db";
+    ledDisplay.displayString(srssi);
+    DEBUGVAL(srssi);
+    delay (1000);
+    
+    DEBUG("Connected");
 
-  // Get time from internet
-  ledDisplay.displayString("Time");
-  setClock();  
+    // Get time from internet
+    ledDisplay.displayString(MSG_GET_TIME_FROM_NTP);
+    setClock();  
 
-  // Check avalable new FW
-  checkFWUpdate(&ledDisplay);
-  
-  // Now where am I?
-  ledDisplay.displayString("Geoloc");
-  String loc=getAbstractApiInfo();
-  DEBUGVAL(loc);
+    // Check avalable new FW
+    checkFWUpdate(&ledDisplay);
+    
+    // Now where am I?
+    ledDisplay.displayString(MSG_GET_LOCALES);
+    String loc=getAbstractApiInfo();
+    DEBUGVAL(loc);
 
-  JSONVar myObject = JSON.parse(loc);
-  if (JSON.typeof(myObject) == "undefined") {
-    ERROR("Parsing input failed!");
-    return;
-  }
+    JSONVar myObject = JSON.parse(loc);
+    if (JSON.typeof(myObject) == "undefined") {
+      ERROR("Parsing input failed!");
+      return;
+    }
 
-  DEBUGVAL(JSON.typeof(myObject)); // prints: object 
-  int hShift;
-  String locale;
-  if (myObject.hasOwnProperty("timezone")) {
-    hShift=(int)myObject["timezone"]["gmt_offset"];
-    locale=JSON.stringify(myObject["timezone"]["name"]);
-    locale.replace("\"","");
-    locale.replace("Europe/","");
-    DEBUGVAL(hShift);
-  }
-  int sShift=hShift*3600;
-  
-  String timeZone="TU";
-  if (sShift>=0)
-    timeZone+="+";
-  timeZone+=String(hShift);
-  ledDisplay.displayString(locale);
-  delay (2500);
-  ledDisplay.displayString(timeZone);
-  delay (2500);
-  timeShift=sShift;
+    DEBUGVAL(JSON.typeof(myObject)); // prints: object 
+    int hShift;
+    String locale;
+    if (myObject.hasOwnProperty("timezone")) {
+      hShift=(int)myObject["timezone"]["gmt_offset"];
+      locale=JSON.stringify(myObject["timezone"]["name"]);
+      locale.replace("\"","");
+      locale.replace("Europe/","");
+      DEBUGVAL(hShift);
+    }
+    int sShift=hShift*3600;
+    
+    String timeZone="TU";
+    if (sShift>=0)
+      timeZone+="+";
+    timeZone+=String(hShift);
+    ledDisplay.displayString(locale);
+    delay (2500);
+    ledDisplay.displayString(timeZone);
+    delay (2500);
+    timeShift=sShift;
+  } // end of job done if connected
+  WiFi.softAP(CONFIG_SSID, CONFIG_PWD);
+  DEBUG("AP MODE ENABLED");
 }
 
 void displayTime(char* timeBuffer){
@@ -171,29 +173,50 @@ void displayTime(char* timeBuffer){
   ledDisplay.displayString(timeBuffer); // display time  
 }
 
-void loop() {
-  struct tm timeinfo;
-  time_t nows = time(nullptr)+timeShift;
-  gmtime_r(&nows, &timeinfo);
-  DEBUGVAL(asctime(&timeinfo));
-  int h = timeinfo.tm_hour;
-  int m =  timeinfo.tm_min;
-  if ((h==04) && (m==00)){
-    delay (10000);
-    ledDisplay.displayString("Reboot");
-    delay (50000);
-    ESP.restart();
-  }
-  char timeBuffer[6];
-  sprintf(timeBuffer,"%d:%02d", h, m);
 
-  displayTime (timeBuffer);
-  unsigned long old=m;
-  // Wait for next minute
-  while (old==m) {
-    nows = time(nullptr)+timeShift;
+int countConnected(){
+    wifi_sta_list_t wifi_sta_list;
+    tcpip_adapter_sta_list_t adapter_sta_list;
+    esp_wifi_ap_get_sta_list(&wifi_sta_list);
+    tcpip_adapter_get_sta_list(&wifi_sta_list, &adapter_sta_list);
+
+    return (adapter_sta_list.num);
+}
+
+void loop() {
+  if (connected){
+    struct tm timeinfo;
+    time_t nows = time(nullptr)+timeShift;
     gmtime_r(&nows, &timeinfo);
-    m =  timeinfo.tm_min;
+    DEBUGVAL(asctime(&timeinfo));
+    int h = timeinfo.tm_hour;
+    int m =  timeinfo.tm_min;
+    if ((h==04) && (m==00)){
+      delay (10000);
+      ledDisplay.displayString(MSG_REBOOT);
+      delay (50000);
+      ESP.restart();
+    }
+    char timeBuffer[6];
+    sprintf(timeBuffer,"%d:%02d", h, m);
+
+    displayTime (timeBuffer);
+    unsigned long old=m;
+    // Wait for next minute
+    while (old==m) {
+      nows = time(nullptr)+timeShift;
+      gmtime_r(&nows, &timeinfo);
+      m =  timeinfo.tm_min;
+      if ((timeinfo.tm_sec%10)==5){
+        int clients=countConnected();
+        DEBUGVAL(clients);
+        if (clients)
+          ledDisplay.displayString(MSG_WORNING_CONNECTIONS);
+        delay (500);
+      }
+    }
+  } else {
+    delay(1000);
   }
 }
 

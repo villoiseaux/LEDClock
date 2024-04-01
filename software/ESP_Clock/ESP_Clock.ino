@@ -14,6 +14,9 @@
 #include "ledMatrix.h"
 #include "esp_wifi.h"
 
+#include <AsyncTCP.h>
+#include "C:\Users\micro\OneDrive\Documents\Arduino\libraries\ESPAsyncWebSrv\src\ESPAsyncWebSrv.h"
+
 // My local files
 #include "local/Abstract.h"
 #include "local/SSIDs.h"
@@ -22,6 +25,8 @@
 #include "messages.h"
 // Display object to share the MD_Parola class 
 LedMatrix ledDisplay;
+
+int REBOOT_MINUTES=0;
 
 int timeShift=0; // time shift in seconds
 
@@ -41,6 +46,8 @@ void setClock() {
   struct tm timeinfo;
   gmtime_r(&nowSecs, &timeinfo);
   DEBUGVAL(asctime(&timeinfo));
+  int REBOOT_MINUTES =  timeinfo.tm_min;
+  DEBUGVAL(REBOOT_MINUTES)
 }
 
 // Manage Wifi
@@ -81,6 +88,16 @@ String getAbstractApiInfo(){
 
 int connected=1;
 
+// Web server
+AsyncWebServer server(80);
+
+// Web server call back
+void notFound(AsyncWebServerRequest *request) {
+    request->send(404, "text/plain", "Not found");
+}
+
+
+
 void setup() {
   Serial.begin(115200);
 
@@ -114,7 +131,7 @@ void setup() {
     ledDisplay.displayString(WiFi.SSID());
     DEBUGVAL(WiFi.SSID());
     delay (1000);
-
+    DEBUGVAL(WiFi.localIP())
     // Dixplay RSSI
     String srssi=String(WiFi.RSSI());
     srssi+="db";
@@ -166,7 +183,13 @@ void setup() {
   } // end of job done if connected
   WiFi.softAP(CONFIG_SSID, CONFIG_PWD);
   DEBUG("AP MODE ENABLED");
-}
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(200, "text/plain", "Hello, world");
+  });
+  server.onNotFound(notFound);
+  server.begin();
+  DEBUGVAL(WiFi.localIP())
+  }
 
 void displayTime(char* timeBuffer){
   ledDisplay.alignment(PA_CENTER);
@@ -183,6 +206,7 @@ int countConnected(){
     return (adapter_sta_list.num);
 }
 
+
 void loop() {
   if (connected){
     struct tm timeinfo;
@@ -191,7 +215,7 @@ void loop() {
     DEBUGVAL(asctime(&timeinfo));
     int h = timeinfo.tm_hour;
     int m =  timeinfo.tm_min;
-    if ((h==04) && (m==00)){
+    if ((h==4) && (m==REBOOT_MINUTES)){
       delay (10000);
       ledDisplay.displayString(MSG_REBOOT);
       delay (50000);
@@ -200,23 +224,35 @@ void loop() {
     char timeBuffer[6];
     sprintf(timeBuffer,"%d:%02d", h, m);
 
-    displayTime (timeBuffer);
+    int oldConnected=countConnected();
+    if (oldConnected>0)
+      ledDisplay.displayString(MSG_WARNING_CONNECTIONS);
+    else
+      displayTime (timeBuffer);
+
+    
     unsigned long old=m;
-    // Wait for next minute
+    // Wait for next minute, check connected device
     while (old==m) {
+      // while current min has not changed
       nows = time(nullptr)+timeShift;
       gmtime_r(&nows, &timeinfo);
       m =  timeinfo.tm_min;
-      if ((timeinfo.tm_sec%10)==5){
-        int clients=countConnected();
+
+      // if connected display warning message
+      int clients=countConnected();
+      if (clients!=oldConnected){
         DEBUGVAL(clients);
-        if (clients)
-          ledDisplay.displayString(MSG_WORNING_CONNECTIONS);
+        oldConnected=clients;
+        if (clients>0)
+          ledDisplay.displayString(MSG_WARNING_CONNECTIONS);
+        else
+          displayTime (timeBuffer);
         delay (500);
       }
     }
   } else {
-    delay(1000);
+    delay(10);
   }
 }
 

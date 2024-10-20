@@ -1,5 +1,4 @@
 #define TRACES
-
 #include <WiFi.h>
 #include <WiFiMulti.h>
 #include <MD_Parola.h>
@@ -95,11 +94,53 @@ AsyncWebServer server(80);
 void notFound(AsyncWebServerRequest *request) {
     request->send(404, "text/plain", "Not found");
 }
+// Web home page
+void homePage(AsyncWebServerRequest *request) {
+    request->send(200, "text/html", String("\
+      <!DOCTYPE html>\
+      <html>\
+      <head><title>")+String(THINGNAME)+String(" ")+String(VERSION)+String("</title></head>\
+      <body>\
+      <h2>configuration</h2>\
+      <form action=\"/config\">\
+      <label for=\"fname\">Your network (RSSI):</label><br>\
+      <input type=\"text\" id=\"fname\" name=\"fname\"><br>\
+      <label for=\"lname\"Network key (password)</label><br>\
+      <input type=\"password\" id=\"lname\" name=\"lname\"><br><br>\
+      <input type=\"submit\" value=\"Validate\">\
+      </form> \
+      </body></html>"));
+}
+// confic page
+void configCallPage(AsyncWebServerRequest *request) {
+    request->send(200, "text/plain", "reboot");
+    ledDisplay.displayString(MSG_REBOOT);
+    delay(5000);
+    for (int i=5; i>=0; i--){
+      ledDisplay.alignment(PA_CENTER);
+      ledDisplay.displayString(String(i));
+      delay(1000);
+    }
+    delay (1000);
+    ESP.restart();
+}
 
+int staCount=0;
 
+void WiFiStationConnected(WiFiEvent_t event, WiFiEventInfo_t info){
+  DEBUG("WiFiStationConnected");
+  staCount++;
+}
+
+void WiFiStationDisConnected(WiFiEvent_t event, WiFiEventInfo_t info){
+  DEBUG("WiFiStationConnected");
+  staCount++;
+}
 
 void setup() {
   Serial.begin(115200);
+  WiFi.onEvent(WiFiStationConnected,    WiFiEvent_t::ARDUINO_EVENT_WIFI_AP_STACONNECTED);
+  WiFi.onEvent(WiFiStationDisConnected, WiFiEvent_t::ARDUINO_EVENT_WIFI_AP_STADISCONNECTED);
 
 
   // Write firmware name & version
@@ -183,9 +224,8 @@ void setup() {
   } // end of job done if connected
   WiFi.softAP(CONFIG_SSID, CONFIG_PWD);
   DEBUG("AP MODE ENABLED");
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(200, "text/plain", "Hello, world");
-  });
+  server.on("/", HTTP_GET,homePage);
+  server.on("/config",HTTP_GET,configCallPage);
   server.onNotFound(notFound);
   server.begin();
   DEBUGVAL(WiFi.localIP())
@@ -198,12 +238,7 @@ void displayTime(char* timeBuffer){
 
 
 int countConnected(){
-    wifi_sta_list_t wifi_sta_list;
-    tcpip_adapter_sta_list_t adapter_sta_list;
-    esp_wifi_ap_get_sta_list(&wifi_sta_list);
-    tcpip_adapter_get_sta_list(&wifi_sta_list, &adapter_sta_list);
-
-    return (adapter_sta_list.num);
+    return (staCount);
 }
 
 

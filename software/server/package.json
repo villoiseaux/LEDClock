@@ -1,0 +1,27 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "description": "Server for ESPClock",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/villoiseaux/LEDClock.git"
+  },
+  "keywords": [
+    "ESP32",
+    "manage",
+    "server"
+  ],
+  "author": "Jean PINON",
+  "license": "GPL-3.0-or-later",
+  "bugs": {
+    "url": "https://github.com/villoiseaux/LEDClock/issues"
+  },
+  "homepage": "https://github.com/villoiseaux/LEDClock#readme",
+  "devDependencies": {
+    "express": "^4.21.1"
+  }
+}

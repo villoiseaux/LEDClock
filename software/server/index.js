@@ -13,6 +13,7 @@ app.get('/', (request, response) => response.send('This is the ESP-Clock Update 
 
 let downloadCounter = 1;
 app.get('/firmware/httpUpdateNew.bin', (request, response) => {
+    console.log('FW update require');
     response.download(path.join(__dirname, 'firmware/httpUpdateNew.bin'), 'httpUpdateNew.bin', (err)=>{
         if (err) {
             console.error("Problem on download firmware: ", err)
@@ -22,7 +23,18 @@ app.get('/firmware/httpUpdateNew.bin', (request, response) => {
     });
     console.log('Your file has been downloaded '+downloadCounter+' times!')
 })
- 
+
+app.get('/gettimediff',  (request, response) => {
+    console.log('Time info');
+    now = new Date();
+    retObj = new Object();
+    retObj.diff=now.getTimezoneOffset();
+    retObj.epoch=now.getTime();
+    retObj.local=now.toString();
+    response.setHeader('Content-Type', 'application/json');
+    response.send(retObj);
+});
+
 
 app.listen(PORT, () => {
     const results = {}; // Or just '{}', an empty object
